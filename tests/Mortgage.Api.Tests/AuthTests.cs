@@ -26,8 +26,10 @@ public class AuthTests : IDisposable
     {
         using var client = _factory.CreateClient();
         var token = await GetTokenAsync(client);
-        // Flip the last character of the signature so it no longer matches.
-        var tampered = token[..^1] + (token[^1] == 'A' ? 'B' : 'A');
+        // Change a character in the middle of the signature so it no longer matches. The middle, not the end:
+        // the last base64url character carries unused bits, so changing it may not change the decoded bytes.
+        var i = token.Length - 10;
+        var tampered = token[..i] + (token[i] == 'A' ? 'B' : 'A') + token[(i + 1)..];
         client.DefaultRequestHeaders.Authorization = new("Bearer", tampered);
 
         var response = await client.GetAsync($"/api/applications/{Guid.NewGuid()}");
