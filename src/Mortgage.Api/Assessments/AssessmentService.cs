@@ -40,7 +40,8 @@ public sealed class AssessmentService(
             logger.LogInformation("Assessment {AssessmentId} queued for application {ApplicationId}", assessment.Id, applicationId);
 
         // Saved first, queued second: if the enqueue is lost, the row is still Pending and a restart re-queues it.
-        await queue.EnqueueAsync(assessment.Id, ct);
+        // CancellationToken.None: the row is saved; the caller leaving must not lose the enqueue.
+        await queue.EnqueueAsync(assessment.Id, CancellationToken.None);
         return assessment;
     }
 

@@ -14,7 +14,15 @@ public sealed class AssessmentWorker(
     {
         try
         {
-            await RequeuePendingAsync(stoppingToken);
+            try
+            {
+                await RequeuePendingAsync(stoppingToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Still serve new requests; the old Pending rows wait for the next start.
+                logger.LogError(ex, "Could not re-queue pending assessments at startup");
+            }
 
             await foreach (var assessmentId in queue.DequeueAllAsync(stoppingToken))
                 await ProcessAsync(assessmentId, stoppingToken);
