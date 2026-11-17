@@ -15,7 +15,7 @@ public class AssessmentConfiguration : IEntityTypeConfiguration<Assessment>
         builder.Property(a => a.Status).HasConversion<string>();
         builder.Property(a => a.Decision).HasConversion<string>();
 
-        // List<string> is a primitive collection: EF stores it as one JSON column.
+        // The list of strings is a primitive collection: EF stores it as one JSON column.
         builder.PrimitiveCollection(a => a.Explanation);
     }
 }

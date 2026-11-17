@@ -20,7 +20,7 @@ public sealed class Assessment
     public decimal? Dti { get; private set; }
     public decimal? MaxBorrowing { get; private set; }
     public Decision? Decision { get; private set; }
-    public List<string> Explanation { get; private set; } = [];
+    public IReadOnlyList<string> Explanation { get; private set; } = [];
 
     public decimal? PolicyMaxLtv { get; private set; }
     public decimal? PolicyMaxDti { get; private set; }
