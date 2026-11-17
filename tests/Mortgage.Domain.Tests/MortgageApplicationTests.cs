@@ -74,7 +74,7 @@ public class MortgageApplicationTests
     }
 
     [Fact]
-    public void Create_accepts_upper_bounds_and_zero_deposit_and_expenses()
+    public void Create_accepts_upper_bounds_with_zero_deposit()
     {
         var application = Create(10_000_000m, 1_000_000m, 0m, 100_000_000m);
         Assert.Equal(100_000_000m, application.LoanAmount);
