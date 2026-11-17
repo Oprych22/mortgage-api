@@ -13,8 +13,9 @@ public class AssessmentTests
         Decision: Decision.Approved,
         Rules:
         [
-            new RuleResult("LoanToValue", true, "LTV 83.3% is within the 90.0% limit."),
-            new RuleResult("DebtToIncome", true, "DTI 30.0% is within the 50.0% limit."),
+            new RuleResult("LTV", true, "LTV 83.3% is within the 90% limit"),
+            new RuleResult("DTI", true, "Debt-to-income 30.0% is within the 50% limit"),
+            new RuleResult("IncomeMultiple", true, "Loan of £250,000.00 is within 4.5x income (£270,000.00)"),
         ]);
 
     [Fact]
