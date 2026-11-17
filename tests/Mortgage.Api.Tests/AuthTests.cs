@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Mortgage.Api.Tests;
 
@@ -64,6 +65,34 @@ public class AuthTests : IDisposable
         var response = await client.PostAsync("/dev/token", null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private const string ProductionKey = "a-production-key-of-at-least-32-bytes-long!";
+
+    [Fact]
+    public async Task Dev_token_endpoint_does_not_exist_in_production()
+    {
+        using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.UseSetting("Auth:SigningKey", ProductionKey);
+        });
+        using var client = factory.CreateClient();
+
+        var response = await client.PostAsync("/dev/token", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public void Host_refuses_to_start_with_a_signing_key_under_32_bytes()
+    {
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("Auth:SigningKey", "too-short-key"));
+
+        var ex = Assert.Throws<InvalidOperationException>(() => factory.CreateClient());
+
+        Assert.Contains("at least 32 bytes", ex.Message);
     }
 
     [Fact]
