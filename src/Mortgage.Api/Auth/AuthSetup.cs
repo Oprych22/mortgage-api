@@ -21,9 +21,7 @@ public static class AuthSetup
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
-                // Trade-off: a symmetric key shared between the token endpoint and the validator, held in
-                // development settings only. In production, tokens come from Entra ID and are validated
-                // against its authority and signing keys (JWKS), so there is no shared secret to look after.
+                // Trade-off: one shared symmetric key from development settings; production validates Entra ID tokens against its JWKS, with no secret to hold.
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,

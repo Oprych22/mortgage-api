@@ -35,8 +35,7 @@ public sealed class AssessmentWorker(
 
     // Restart recovery: the queue is in memory, so anything queued when the app stopped is gone from it
     // but still Pending in the database. Put those back.
-    // Trade-off: with more than one instance each would re-queue the same rows and double-process them.
-    // A durable queue with its own delivery tracking fixes that.
+    // Trade-off: a second instance would re-queue and double-process the same rows; a durable queue with delivery tracking fixes that.
     private async Task RequeuePendingAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
@@ -70,8 +69,8 @@ public sealed class AssessmentWorker(
         }
         catch (Exception ex)
         {
-            // CompleteAsync handles a failed run itself; this catches what it lets out (a failed save).
-            // The loop must survive it: the row stays Pending and is re-queued at the next start.
+            // CompleteAsync handles a failed run itself; this catches what it lets out (a failed read or save).
+            // Trade-off: no retry; the row stays Pending until the next start re-queues it. A durable queue would redeliver, then dead-letter.
             logger.LogError(ex, "Assessment {AssessmentId} could not be processed", assessmentId);
         }
     }

@@ -2,9 +2,7 @@ using System.Threading.Channels;
 
 namespace Mortgage.Infrastructure.Queue;
 
-// Trade-off: the queue lives in this process's memory, so anything queued is lost if the process stops
-// (the worker re-queues Pending rows at startup) and a second instance would not share it.
-// A durable queue such as Service Bus replaces this class.
+// Trade-off: an in-memory queue is lost on stop (Pending rows are re-queued at startup) and not shared across instances; Service Bus replaces it.
 public sealed class ChannelAssessmentQueue : IAssessmentQueue
 {
     // Unbounded: an enqueue never waits. SingleReader because exactly one worker drains it.

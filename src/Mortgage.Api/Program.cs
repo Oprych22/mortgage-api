@@ -47,8 +47,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    // Trade-off: EnsureCreated builds the schema on first run so a clone needs nothing set up.
-    // It never updates an existing database; migrations are the next step.
+    // Trade-off: EnsureCreated builds the schema on first run but never updates an existing database; migrations replace it.
     scope.ServiceProvider.GetRequiredService<MortgageDbContext>().Database.EnsureCreated();
 }
 
