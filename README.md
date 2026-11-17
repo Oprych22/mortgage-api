@@ -180,9 +180,9 @@ separately from the API. It's the same pattern I've used with Kafka.
 
 ## How AI was used
 
-I built this with Claude Code. I set the design and the conventions (see `CLAUDE.md`), reviewed every change, and can
-explain every line. Before any code was written, the design was reviewed by AI twice, each time with no shared
-context; the findings changed it (the DTI cap, a duplicated rule, missing fields binding to 0, and the scaling answer).
-A separate AI review of the finished code, with what was fixed, is in `REVIEW.md`.
-
-**[FILL]**
+I built this with Claude Code. I set the design and the affordability rules first, and the conventions (see
+`CLAUDE.md`). Before any code was written, the design was reviewed by AI twice and both reviews changed it; the second,
+with no shared context, found the DTI cap, a duplicated rule, missing fields binding to 0, and the scaling answer.
+Claude Code then wrote the code one task at a time, with a separate AI review of each task before the next started. I
+read every change before it went in and can explain every line. An independent AI review of the whole repository, with
+what was fixed and what was left, is in `REVIEW.md`.
