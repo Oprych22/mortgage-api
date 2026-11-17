@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -40,8 +41,19 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         db.SaveChanges();
     }
 
-    // The only way tests get a client, so adding authentication later changes this one method.
-    public HttpClient CreateApiClient() => CreateClient();
+    private string? _token;
+
+    // The only way tests get a client. It asks /dev/token once per factory and sends the token on every request.
+    public HttpClient CreateApiClient()
+    {
+        var client = CreateClient();
+        _token ??= client.PostAsync("/dev/token", null).GetAwaiter().GetResult()
+            .Content.ReadFromJsonAsync<TokenResponse>().GetAwaiter().GetResult()!.AccessToken;
+        client.DefaultRequestHeaders.Authorization = new("Bearer", _token);
+        return client;
+    }
+
+    private sealed record TokenResponse(string AccessToken);
 
     protected override void Dispose(bool disposing)
     {

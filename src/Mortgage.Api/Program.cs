@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.HttpLogging;
 using Mortgage.Api.Applications;
 using Mortgage.Api.Assessments;
+using Mortgage.Api.Auth;
 using Mortgage.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,7 @@ builder.Services.AddOptions<AffordabilityOptions>()
     .BindConfiguration(AffordabilityOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
+builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddScoped<AssessmentService>();
 builder.Services.AddHostedService<AssessmentWorker>();
 // Method, path, status and duration only. Bodies are never logged: they hold the applicant's finances.
@@ -48,11 +50,17 @@ using (var scope = app.Services.CreateScope())
 app.UseHttpLogging();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+// Order matters: authentication reads the token and sets the user, then authorization decides using that user.
+app.UseAuthentication();
+app.UseAuthorization();
 
 // On app, not the /api group, so it stays anonymous when authentication is added to /api.
 app.MapHealthChecks("/health");
 
+if (app.Environment.IsDevelopment()) app.MapDevTokenEndpoints();
+
 var api = app.MapGroup("/api");
+api.RequireAuthorization();
 api.MapApplicationEndpoints();
 api.MapAssessmentEndpoints();
 
