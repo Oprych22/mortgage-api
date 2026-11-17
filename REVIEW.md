@@ -37,3 +37,24 @@ Smaller items from earlier task reviews:
 
 One note on F2: the review suggested always rounding failures up. That would change an existing correct figure
 ("LTV 93.3%" would become 93.4%), so the fix rounds up only when ordinary rounding would land on or below the limit.
+
+## Second review
+
+A second AI pass, again with no shared context, read all of `src` and `tests` after the fixes above. It ran nothing.
+Nothing critical; ten findings.
+
+| # | Finding | Decision | Commit or reason |
+|---|---|---|---|
+| S1 | The F2 fix covered percentages only: a loan half a penny over the income multiple printed as equal to its limit | Fixed: borrowing limits round down to the penny | 2714c67 |
+| S2 | Response numbers had their own rounding, so `ltvPercent` could read 90.0 beside "LTV 90.1% exceeds" | Fixed: the response and the explanation share `DisplayRounding` | 2714c67 |
+| S3 | The immediate endpoint saved a Pending row, then completed it in a second save; a dropped request left it orphaned | Fixed: completed in memory, saved once | db85dc7 |
+| S4 | A failed database read while completing was recorded as a permanent Failed | Fixed with S3: only the calculation is caught; a failed read leaves the row Pending | db85dc7 |
+| S5 | `Assessments:WorkerDelaySeconds` is not validated at startup | Left: a demo-only setting; a bound options class with `ValidateOnStart` is the fix | n/a |
+| S6 | Maximum borrowing ignores the LTV cap | Left: intended and stated in the README (it depends on the deposit, not the borrower) | n/a |
+| S7 | `Auth:Issuer` and `Auth:Audience` are not validated at startup | Left: development-only token setup, replaced by Entra ID in production | n/a |
+| S8 | Field bounds are declared in both the request attributes and the domain | Left: the attributes report every bad field in one 400, the domain stops at the first and stays the authority | n/a |
+| S9 | Several `// Trade-off:` comments ran past one line; the worker's no-retry had no marker | Fixed | 1cff535 |
+| S10 | A seeded test factory cannot be combined with `WithWebHostBuilder` | Left: no test does this | n/a |
+
+One part of S2 was left: policy percentages in the response are still rounded to 1 dp, so a policy value such as
+87.25% would read 87.3 there and 87.25 in the text. The default policy has no such value.
