@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    ports:
+      - "${HOST_PORT:-8080}:8080"
+    environment:
+      # Demo setup: Development enables POST /dev/token and the built-in dev signing key.
+      # In Production the app refuses to start without Auth:SigningKey.
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Mortgage: Data Source=/data/mortgage.db
+    volumes:
+      - mortgage-data:/data
+
+volumes:
+  mortgage-data:
