@@ -1,0 +1,81 @@
+# Demo requests, JetBrains HTTP client syntax (Rider, IntelliJ).
+# Run them in order: each response handler stores the token or id the next request needs.
+# Start the API first: dotnet run --project src/Mortgage.Api
+
+@host = http://localhost:8080
+
+### 1. Get a token (Development only)
+POST {{host}}/dev/token
+Content-Type: application/json
+
+{ "name": "demo" }
+
+> {%
+    client.global.set("token", response.body.accessToken);
+%}
+
+### 2. Create the Approve application: loan 250,000 on a 300,000 property
+POST {{host}}/api/applications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "annualIncome": 60000,
+  "monthlyExpenses": 500,
+  "depositAmount": 50000,
+  "propertyValue": 300000,
+  "termYears": 25
+}
+
+> {%
+    client.global.set("approveId", response.body.id);
+%}
+
+### 3. Assess it now: LTV 83.3%, DTI 45.3%, Approved, max borrowing 270,000
+POST {{host}}/api/applications/{{approveId}}/assessments
+Authorization: Bearer {{token}}
+
+### 4. Create the Decline application: deposit 20,000, so the loan is 280,000
+POST {{host}}/api/applications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "annualIncome": 60000,
+  "monthlyExpenses": 500,
+  "depositAmount": 20000,
+  "propertyValue": 300000,
+  "termYears": 25
+}
+
+> {%
+    client.global.set("declineId", response.body.id);
+%}
+
+### 5. Assess it: Declined for two reasons, LTV 93.3% over 90% and loan over 4.5x income
+POST {{host}}/api/applications/{{declineId}}/assessments
+Authorization: Bearer {{token}}
+
+### 6. Missing field: no monthlyExpenses gives 400, not a silent 0
+POST {{host}}/api/applications
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "annualIncome": 60000,
+  "depositAmount": 50000,
+  "propertyValue": 300000,
+  "termYears": 25
+}
+
+### 7. Queue an assessment: 202 Pending; the worker completes it (3 s delay in Development)
+POST {{host}}/api/applications/{{approveId}}/assessments/queued
+Authorization: Bearer {{token}}
+
+> {%
+    client.global.set("assessmentId", response.body.id);
+%}
+
+### 8. Get the queued assessment: Pending at first, Completed a few seconds later
+GET {{host}}/api/assessments/{{assessmentId}}
+Authorization: Bearer {{token}}
