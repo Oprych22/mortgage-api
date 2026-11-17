@@ -67,9 +67,10 @@ public class AssessmentEndpointTests : IDisposable
         var result = (await ReadJson(response)).GetProperty("result");
         Assert.Equal("Declined", result.GetProperty("decision").GetString());
         Assert.Equal(93.3m, result.GetProperty("ltvPercent").GetDecimal());
-        var failed = result.GetProperty("explanation").EnumerateArray()
-            .Count(e => e.GetString()!.Contains("exceeds", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal(2, failed);
+        var lines = result.GetProperty("explanation").EnumerateArray().Select(e => e.GetString()!).ToList();
+        Assert.Contains("exceeds", lines.Single(l => l.StartsWith("LTV")));
+        Assert.Contains("exceeds", lines.Single(l => l.StartsWith("Loan of")));
+        Assert.Contains("within", lines.Single(l => l.StartsWith("Debt-to-income")));
     }
 
     [Fact]
@@ -112,12 +113,15 @@ public class AssessmentEndpointTests : IDisposable
         var second = await ReadJson(await _client.PostAsync($"/api/applications/{applicationId}/assessments", null));
 
         Assert.NotEqual(first.GetProperty("id").GetGuid(), second.GetProperty("id").GetGuid());
+        Assert.Equal("Completed", first.GetProperty("status").GetString());
+        Assert.Equal("Completed", second.GetProperty("status").GetString());
     }
 
     [Fact]
     public void Zero_stress_rate_fails_startup_validation()
     {
-        using var factory = new ApiFactory().WithWebHostBuilder(builder =>
+        using var baseFactory = new ApiFactory();
+        using var factory = baseFactory.WithWebHostBuilder(builder =>
             builder.ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?> { ["Affordability:StressRate"] = "0" })));
 

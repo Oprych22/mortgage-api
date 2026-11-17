@@ -43,6 +43,7 @@ public sealed class AssessmentService(
             assessment.Fail(ex.Message, clock.GetUtcNow());
         }
 
+        // A failed save is not caught: marking Failed needs the same database. The row stays Pending for a restart to re-queue.
         await db.SaveChangesAsync(ct);
     }
 }
