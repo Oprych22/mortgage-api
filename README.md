@@ -120,8 +120,10 @@ so any decision can be explained later.
 - Maximum borrowing is an estimate, not a rule: the lower of 4.5 x income and the largest loan whose stressed
   repayment keeps DTI at 50%, floored at zero. It ignores the LTV cap, which depends on the deposit, not the borrower.
 - Money is `decimal` throughout. Rounding is half-up and happens only in responses and explanation text (2 dp for
-  money, 1 dp for percentages); rules compare exact values. The one exception is a failing percentage that would
-  round down to its limit: it is rounded up, so the text never says "90.0% exceeds the 90% limit".
+  money, 1 dp for percentages); rules compare exact values. Two exceptions keep a fail from reading as equal to its
+  limit: a failing percentage that would round down to its limit is rounded up (never "90.0% exceeds the 90% limit"),
+  and borrowing limits are rounded down to the penny. The response numbers and the explanation text share one rounding
+  helper, so they always agree.
 - Input bounds: income > 0 and <= 10m; expenses 0 to 1m; deposit 0 to 100m; property value > 0 and <= 100m; term
   5 to 40 years; deposit must be less than the property value.
   Money values may have at most 2 decimal places (pounds and pence); more is a 400.

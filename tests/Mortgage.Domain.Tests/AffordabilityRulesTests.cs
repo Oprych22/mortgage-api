@@ -33,6 +33,16 @@ public class AffordabilityRulesTests
     }
 
     [Fact]
+    public void Income_multiple_just_over_the_limit_never_prints_the_limit()
+    {
+        // 4.5 x 60,000.01 is 270,000.045: a loan of 270,000.05 fails, but half-up rounding would print both as 270,000.05.
+        var result = AffordabilityRules.IncomeMultiple(270_000.05m, 60_000.01m, Policy);
+
+        Assert.False(result.Passed);
+        Assert.Equal("Loan of £270,000.05 exceeds 4.5x income (£270,000.04)", result.Message);
+    }
+
+    [Fact]
     public void Passing_rules_keep_ordinary_rounding()
     {
         Assert.Equal("LTV 83.3% is within the 90% limit", AffordabilityRules.Ltv(0.83333m, Policy).Message);

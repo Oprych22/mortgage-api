@@ -24,23 +24,16 @@ public static class AffordabilityRules
         var maxLoan = policy.MaxIncomeMultiple * annualIncome;
         var passed = loan <= maxLoan;
         return new RuleResult("IncomeMultiple", passed,
-            $"Loan of {Money(loan)} {Verdict(passed)} {Limit(policy.MaxIncomeMultiple)}x income ({Money(maxLoan)})");
+            $"Loan of {Money(DisplayRounding.Money(loan))} {Verdict(passed)} {Limit(policy.MaxIncomeMultiple)}x income ({Money(DisplayRounding.MoneyLimit(maxLoan))})");
     }
 
     private static string Verdict(bool passed) => passed ? "is within" : "exceeds";
 
     // Rounded only here, in the text; the pass/fail test above uses the exact value.
-    // A failing value that would round down to the limit ("90.0% exceeds the 90% limit") is rounded up instead, so a fail never reads as equal to its limit.
-    private static string Percent(decimal ratio, decimal maxRatio)
-    {
-        var percent = Math.Round(ratio * 100, 1, MidpointRounding.AwayFromZero);
-        if (ratio > maxRatio && percent <= maxRatio * 100)
-            percent = Math.Ceiling(ratio * 1000) / 10;
-        return percent.ToString("0.0", CultureInfo.InvariantCulture);
-    }
+    private static string Percent(decimal ratio, decimal maxRatio) =>
+        DisplayRounding.Percent(ratio, maxRatio).ToString("0.0", CultureInfo.InvariantCulture);
 
     private static string Limit(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
-    private static string Money(decimal amount) =>
-        "£" + Math.Round(amount, 2, MidpointRounding.AwayFromZero).ToString("N2", CultureInfo.InvariantCulture);
+    private static string Money(decimal amount) => "£" + amount.ToString("N2", CultureInfo.InvariantCulture);
 }

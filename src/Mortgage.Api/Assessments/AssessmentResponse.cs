@@ -17,16 +17,18 @@ public sealed record AssessmentResult(
     decimal MaxBorrowing, IReadOnlyList<string> Explanation, PolicyUsed Policy)
 {
     // Rounding happens here, at the edge: the domain and the database keep full precision.
+    // DisplayRounding is the same rounding the explanation text uses, so the numbers and the text agree.
     public static AssessmentResult From(Assessment a) => new(
-        Money(a.LoanAmount!.Value), Percent(a.Ltv!.Value), Money(a.MonthlyRepayment!.Value),
-        Percent(a.Dti!.Value), a.Decision!.Value.ToString(), Money(a.MaxBorrowing!.Value), a.Explanation,
+        DisplayRounding.Money(a.LoanAmount!.Value),
+        DisplayRounding.Percent(a.Ltv!.Value, a.PolicyMaxLtv!.Value),
+        DisplayRounding.Money(a.MonthlyRepayment!.Value),
+        DisplayRounding.Percent(a.Dti!.Value, a.PolicyMaxDti!.Value),
+        a.Decision!.Value.ToString(), DisplayRounding.MoneyLimit(a.MaxBorrowing!.Value), a.Explanation,
         new PolicyUsed(
-            Percent(a.PolicyMaxLtv!.Value), Percent(a.PolicyMaxDti!.Value),
-            a.PolicyMaxIncomeMultiple!.Value, Percent(a.PolicyStressRate!.Value)));
+            PolicyPercent(a.PolicyMaxLtv.Value), PolicyPercent(a.PolicyMaxDti.Value),
+            a.PolicyMaxIncomeMultiple!.Value, PolicyPercent(a.PolicyStressRate!.Value)));
 
-    private static decimal Money(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
-
-    private static decimal Percent(decimal fraction) => Math.Round(fraction * 100, 1, MidpointRounding.AwayFromZero);
+    private static decimal PolicyPercent(decimal fraction) => Math.Round(fraction * 100, 1, MidpointRounding.AwayFromZero);
 }
 
 public sealed record PolicyUsed(
