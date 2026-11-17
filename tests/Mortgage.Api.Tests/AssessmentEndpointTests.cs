@@ -3,10 +3,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Mortgage.Api.Assessments;
+using Mortgage.Domain.Assessments;
 using Mortgage.Infrastructure;
 
 namespace Mortgage.Api.Tests;
@@ -100,6 +102,36 @@ public class AssessmentEndpointTests : IDisposable
         Assert.Equal("Declined", result.GetProperty("decision").GetString());
         Assert.Equal(270_000.05m, result.GetProperty("loanAmount").GetDecimal());
         Assert.Equal(270_000.04m, result.GetProperty("maxBorrowing").GetDecimal());
+    }
+
+    [Fact]
+    public async Task Assess_now_saves_once_and_never_stores_a_pending_row()
+    {
+        // If the immediate path saved a Pending row first, a dropped request would leave it behind with nothing queued.
+        var saves = new RecordAssessmentSaves();
+        using var factory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+                services.ConfigureDbContext<MortgageDbContext>(options => options.AddInterceptors(saves))));
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = _client.DefaultRequestHeaders.Authorization;
+        var applicationId = await CreateApplication(300_000m);
+
+        var response = await client.PostAsync($"/api/applications/{applicationId}/assessments", null);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal([AssessmentStatus.Completed], saves.Statuses);
+    }
+
+    private sealed class RecordAssessmentSaves : SaveChangesInterceptor
+    {
+        public List<AssessmentStatus> Statuses { get; } = [];
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            Statuses.AddRange(eventData.Context!.ChangeTracker.Entries<Assessment>().Select(e => e.Entity.Status));
+            return ValueTask.FromResult(result);
+        }
     }
 
     [Fact]

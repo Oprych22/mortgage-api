@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Mortgage.Domain.Applications;
 using Mortgage.Domain.Assessments;
 using Mortgage.Infrastructure;
 using Mortgage.Infrastructure.Queue;
@@ -7,24 +8,27 @@ using Mortgage.Infrastructure.Queue;
 namespace Mortgage.Api.Assessments;
 
 // The one place an assessment is run. The immediate endpoint calls AssessNowAsync; the queued endpoint
-// calls QueueAsync, and the background worker later calls CompleteAsync. Both end up in the same calculator.
+// calls QueueAsync, and the background worker later calls CompleteAsync. Both end up in Run, and the same calculator.
 public sealed class AssessmentService(
     MortgageDbContext db, IOptions<AffordabilityOptions> options, TimeProvider clock,
     ILogger<AssessmentService> logger, IAssessmentQueue queue)
 {
     public async Task<Assessment?> AssessNowAsync(Guid applicationId, CancellationToken ct)
     {
-        // Check first, so an unknown application leaves no orphan Pending row behind.
-        if (!await db.Applications.AnyAsync(a => a.Id == applicationId, ct)) return null;
+        var application = await db.Applications.FindAsync([applicationId], ct);
+        if (application is null) return null;
 
         var assessment = Assessment.CreatePending(applicationId, clock.GetUtcNow());
+        using var scope = BeginScope(applicationId, assessment.Id);
+        logger.LogInformation("Assessment {AssessmentId} requested for application {ApplicationId}", assessment.Id, applicationId);
+
+        // Finished in memory and saved once: this path never stores a Pending row, so a dropped request cannot
+        // leave one behind with nothing queued to pick it up.
+        Run(assessment, application);
         db.Assessments.Add(assessment);
         await db.SaveChangesAsync(ct);
 
-        using (BeginScope(applicationId, assessment.Id))
-            logger.LogInformation("Assessment {AssessmentId} requested for application {ApplicationId}", assessment.Id, applicationId);
-
-        await CompleteAsync(assessment.Id, ct);
+        LogCompleted(assessment);
         return assessment;
     }
 
@@ -53,27 +57,38 @@ public sealed class AssessmentService(
         // Every log line in this operation carries both ids, so one assessment can be followed through the logs.
         using var scope = BeginScope(assessment.ApplicationId, assessmentId);
 
+        // A failed read or save is not caught: marking Failed needs the same database. The row stays Pending for a restart to re-queue.
+        var application = await db.Applications.FindAsync([assessment.ApplicationId], ct);
+        Run(assessment, application);
+        await db.SaveChangesAsync(ct);
+
+        LogCompleted(assessment);
+    }
+
+    // Completes or fails the assessment in memory; the caller saves it.
+    private void Run(Assessment assessment, MortgageApplication? application)
+    {
         try
         {
-            var application = await db.Applications.FindAsync([assessment.ApplicationId], ct)
-                ?? throw new InvalidOperationException($"Application {assessment.ApplicationId} not found.");
+            if (application is null)
+                throw new InvalidOperationException($"Application {assessment.ApplicationId} not found.");
             var policy = options.Value.ToPolicy();
             assessment.Complete(AffordabilityCalculator.Assess(application, policy), policy, clock.GetUtcNow());
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex)
         {
             // One bad assessment must not take the caller (or the worker) down: record it and carry on.
-            logger.LogError(ex, "Assessment {AssessmentId} failed", assessmentId);
+            logger.LogError(ex, "Assessment {AssessmentId} failed", assessment.Id);
             // The stored reason is returned to clients, so it is fixed text; the exception detail stays in the log.
             assessment.Fail("The assessment could not be completed.", clock.GetUtcNow());
         }
+    }
 
-        // A failed save is not caught: marking Failed needs the same database. The row stays Pending for a restart to re-queue.
-        await db.SaveChangesAsync(ct);
-
-        // Ids and decision only: never the applicant's figures.
+    // Ids and decision only: never the applicant's figures.
+    private void LogCompleted(Assessment assessment)
+    {
         if (assessment.Status == AssessmentStatus.Completed)
-            logger.LogInformation("Assessment {AssessmentId} completed: {Decision}", assessmentId, assessment.Decision);
+            logger.LogInformation("Assessment {AssessmentId} completed: {Decision}", assessment.Id, assessment.Decision);
     }
 
     // A template scope, not a dictionary: the simple console prints it as text, and a structured sink
