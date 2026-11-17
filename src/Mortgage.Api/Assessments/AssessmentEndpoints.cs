@@ -8,6 +8,7 @@ public static class AssessmentEndpoints
     public static RouteGroupBuilder MapAssessmentEndpoints(this RouteGroupBuilder api)
     {
         api.MapPost("/applications/{id:guid}/assessments", AssessNowAsync);
+        api.MapPost("/applications/{id:guid}/assessments/queued", QueueAsync);
         api.MapGet("/assessments/{id:guid}", GetAsync);
         return api;
     }
@@ -19,6 +20,15 @@ public static class AssessmentEndpoints
         return assessment is null
             ? TypedResults.NotFound()
             : TypedResults.Created($"/api/assessments/{assessment.Id}", AssessmentResponse.From(assessment));
+    }
+
+    private static async Task<Results<Accepted<AssessmentResponse>, NotFound>> QueueAsync(
+        Guid id, AssessmentService service, CancellationToken ct)
+    {
+        var assessment = await service.QueueAsync(id, ct);
+        return assessment is null
+            ? TypedResults.NotFound()
+            : TypedResults.Accepted($"/api/assessments/{assessment.Id}", AssessmentResponse.From(assessment));
     }
 
     private static async Task<Results<Ok<AssessmentResponse>, NotFound>> GetAsync(

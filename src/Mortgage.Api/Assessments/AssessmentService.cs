@@ -2,14 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Mortgage.Domain.Assessments;
 using Mortgage.Infrastructure;
+using Mortgage.Infrastructure.Queue;
 
 namespace Mortgage.Api.Assessments;
 
-// The one place an assessment is run. The endpoint calls AssessNowAsync; the background
-// worker calls CompleteAsync. Both end up in the same calculator.
+// The one place an assessment is run. The immediate endpoint calls AssessNowAsync; the queued endpoint
+// calls QueueAsync, and the background worker later calls CompleteAsync. Both end up in the same calculator.
 public sealed class AssessmentService(
     MortgageDbContext db, IOptions<AffordabilityOptions> options, TimeProvider clock,
-    ILogger<AssessmentService> logger)
+    ILogger<AssessmentService> logger, IAssessmentQueue queue)
 {
     public async Task<Assessment?> AssessNowAsync(Guid applicationId, CancellationToken ct)
     {
@@ -24,6 +25,22 @@ public sealed class AssessmentService(
             logger.LogInformation("Assessment {AssessmentId} requested for application {ApplicationId}", assessment.Id, applicationId);
 
         await CompleteAsync(assessment.Id, ct);
+        return assessment;
+    }
+
+    public async Task<Assessment?> QueueAsync(Guid applicationId, CancellationToken ct)
+    {
+        if (!await db.Applications.AnyAsync(a => a.Id == applicationId, ct)) return null;
+
+        var assessment = Assessment.CreatePending(applicationId, clock.GetUtcNow());
+        db.Assessments.Add(assessment);
+        await db.SaveChangesAsync(ct);
+
+        using (BeginScope(applicationId, assessment.Id))
+            logger.LogInformation("Assessment {AssessmentId} queued for application {ApplicationId}", assessment.Id, applicationId);
+
+        // Saved first, queued second: if the enqueue is lost, the row is still Pending and a restart re-queues it.
+        await queue.EnqueueAsync(assessment.Id, ct);
         return assessment;
     }
 

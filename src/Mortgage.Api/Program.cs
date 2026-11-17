@@ -29,6 +29,7 @@ builder.Services.AddOptions<AffordabilityOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 builder.Services.AddScoped<AssessmentService>();
+builder.Services.AddHostedService<AssessmentWorker>();
 // Method, path, status and duration only. Bodies are never logged: they hold the applicant's finances.
 builder.Services.AddHttpLogging(options => options.LoggingFields =
     HttpLoggingFields.RequestMethod | HttpLoggingFields.RequestPath |
