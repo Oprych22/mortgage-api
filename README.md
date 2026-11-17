@@ -158,7 +158,7 @@ separately from the API. It's the same pattern I've used with Kafka.
   Production without a configured key.
 - Simplified underwriting: three rules, one stress rate, no credit data.
 - No pagination, idempotency keys, or update/delete of applications.
-- Each simplification is marked in the code with a `// Trade-off:` comment.
+- Where a simplification lives in the code, it is marked with a `// Trade-off:` comment saying what replaces it at scale.
 
 ### Next Steps
 
