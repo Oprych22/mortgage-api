@@ -90,7 +90,7 @@ curl -s -o /dev/null -w '%{http_code}\n' $H/api/applications/$APP_ID
 | `GET /api/applications/{id}` | 200, or 404 (also for an id that is not a Guid) |
 | `POST /api/applications/{id}/assessments` | 201 + Location, the completed assessment; 404 if no application |
 | `POST /api/applications/{id}/assessments/queued` | 202 + Location, status Pending; 404 if no application |
-| `GET /api/assessments/{id}` | 200 with status (Pending, Completed, Failed) and the result once completed |
+| `GET /api/assessments/{id}` | 200 with status (Pending, Completed, Failed) and the result once completed, or 404 if unknown |
 | `GET /health` | 200 Healthy when the database is reachable; anonymous |
 
 ## Run the tests
@@ -120,9 +120,12 @@ so any decision can be explained later.
 - Maximum borrowing is an estimate, not a rule: the lower of 4.5 x income and the largest loan whose stressed
   repayment keeps DTI at 50%, floored at zero. It ignores the LTV cap, which depends on the deposit, not the borrower.
 - Money is `decimal` throughout. Rounding is half-up and happens only in responses and explanation text (2 dp for
-  money, 1 dp for percentages); rules compare exact values.
+  money, 1 dp for percentages); rules compare exact values. The one exception is a failing percentage that would
+  round down to its limit: it is rounded up, so the text never says "90.0% exceeds the 90% limit".
 - Input bounds: income > 0 and <= 10m; expenses 0 to 1m; deposit 0 to 100m; property value > 0 and <= 100m; term
   5 to 40 years; deposit must be less than the property value.
+  Money values may have at most 2 decimal places (pounds and pence); more is a 400.
+- A failed assessment returns a fixed, client-safe `failureReason`; the underlying exception is only in the log.
 
 ## Design & Reflection
 
@@ -145,8 +148,9 @@ so any decision can be explained later.
 
 The first change is the database. A local SQLite file can't be shared, so a second API instance would have its own
 data; nothing scales out until the database moves to a server (on Azure I'd use Azure SQL; PostgreSQL works too). That
-is a connection string and the provider in `AddInfrastructure`. After that the API is stateless and scales by adding
-instances. The second change is the queue: it is in memory, so it is lost on a crash and tied to one process. It sits
+is a connection string and the provider in `AddInfrastructure`, plus column precision for the decimals. After that the
+endpoints are stateless; the in-process worker is not (each instance would re-queue Pending rows at startup), which is
+why the queue is the second change. The queue is in memory, so it is lost on a crash and tied to one process. It sits
 behind `IAssessmentQueue`, so a durable queue (Azure Service Bus, say) is one new class, and workers can then scale
 separately from the API. It's the same pattern I've used with Kafka.
 
@@ -157,6 +161,8 @@ separately from the API. It's the same pattern I've used with Kafka.
 - Development-only token endpoint and a signing key in `appsettings.Development.json`; the app refuses to start in
   Production without a configured key.
 - Simplified underwriting: three rules, one stress rate, no credit data.
+- Authentication only, no ownership: any valid token can read any application. The next step is storing the caller's
+  `sub` as the owner and filtering on it, or role/scope policies for staff.
 - No pagination, idempotency keys, or update/delete of applications.
 - Where a simplification lives in the code, it is marked with a `// Trade-off:` comment saying what replaces it at scale.
 
@@ -164,6 +170,8 @@ separately from the API. It's the same pattern I've used with Kafka.
 
 - A server database with EF migrations, and a durable queue.
 - OpenTelemetry tracing and metrics on top of the existing structured logs.
+- List an application's assessments (`GET /api/applications/{id}/assessments`); the relationship is stored but not
+  yet exposed.
 - Idempotency keys on the POST endpoints, so a retried request doesn't create a duplicate.
 - Versioned policy history, so a policy change is recorded rather than only copied onto each assessment.
 - A real identity provider (Entra ID) in place of the development token endpoint.
