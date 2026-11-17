@@ -20,6 +20,9 @@ public sealed class AssessmentService(
         db.Assessments.Add(assessment);
         await db.SaveChangesAsync(ct);
 
+        using (BeginScope(applicationId, assessment.Id))
+            logger.LogInformation("Assessment {AssessmentId} requested for application {ApplicationId}", assessment.Id, applicationId);
+
         await CompleteAsync(assessment.Id, ct);
         return assessment;
     }
@@ -28,6 +31,9 @@ public sealed class AssessmentService(
     {
         var assessment = await db.Assessments.FindAsync([assessmentId], ct);
         if (assessment is null || assessment.Status != AssessmentStatus.Pending) return;
+
+        // Every log line in this operation carries both ids, so one assessment can be followed through the logs.
+        using var scope = BeginScope(assessment.ApplicationId, assessmentId);
 
         try
         {
@@ -45,5 +51,12 @@ public sealed class AssessmentService(
 
         // A failed save is not caught: marking Failed needs the same database. The row stays Pending for a restart to re-queue.
         await db.SaveChangesAsync(ct);
+
+        // Ids and decision only: never the applicant's figures.
+        if (assessment.Status == AssessmentStatus.Completed)
+            logger.LogInformation("Assessment {AssessmentId} completed: {Decision}", assessmentId, assessment.Decision);
     }
+
+    private IDisposable? BeginScope(Guid applicationId, Guid assessmentId) => logger.BeginScope(
+        new Dictionary<string, object> { ["ApplicationId"] = applicationId, ["AssessmentId"] = assessmentId });
 }

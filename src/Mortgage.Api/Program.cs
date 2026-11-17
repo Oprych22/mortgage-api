@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.HttpLogging;
 using Mortgage.Api.Applications;
 using Mortgage.Api.Assessments;
 using Mortgage.Infrastructure;
@@ -28,6 +29,11 @@ builder.Services.AddOptions<AffordabilityOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 builder.Services.AddScoped<AssessmentService>();
+// Method, path, status and duration only. Bodies are never logged: they hold the applicant's finances.
+builder.Services.AddHttpLogging(options => options.LoggingFields =
+    HttpLoggingFields.RequestMethod | HttpLoggingFields.RequestPath |
+    HttpLoggingFields.ResponseStatusCode | HttpLoggingFields.Duration);
+builder.Services.AddHealthChecks().AddDbContextCheck<MortgageDbContext>();
 
 var app = builder.Build();
 
@@ -38,8 +44,12 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<MortgageDbContext>().Database.EnsureCreated();
 }
 
+app.UseHttpLogging();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+// On app, not the /api group, so it stays anonymous when authentication is added to /api.
+app.MapHealthChecks("/health");
 
 var api = app.MapGroup("/api");
 api.MapApplicationEndpoints();
