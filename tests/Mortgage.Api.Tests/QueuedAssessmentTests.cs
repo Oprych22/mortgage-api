@@ -22,7 +22,9 @@ public class QueuedAssessmentTests
         JsonElement body;
         do
         {
-            body = await ReadJson(await client.GetAsync(url));
+            var response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            body = await ReadJson(response);
             if (body.GetProperty("status").GetString() != "Pending") return body;
             await Task.Delay(100);
         } while (DateTime.UtcNow < deadline);
@@ -89,6 +91,35 @@ public class QueuedAssessmentTests
 
         Assert.Equal("Completed", done.GetProperty("status").GetString());
         Assert.Equal("Approved", done.GetProperty("result").GetProperty("decision").GetString());
+    }
+
+    [Fact]
+    public async Task Failing_assessment_is_marked_failed_and_the_worker_carries_on()
+    {
+        var now = new DateTimeOffset(2026, 11, 17, 9, 0, 0, TimeSpan.Zero);
+        // An assessment whose application does not exist: running it throws, so it must end up Failed.
+        var orphan = Assessment.CreatePending(Guid.NewGuid(), now);
+        using var factory = new ApiFactory(db =>
+        {
+            db.Database.OpenConnection();
+            db.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF");
+            db.Assessments.Add(orphan);
+        });
+        using var client = factory.CreateApiClient();
+
+        var failed = await WaitForCompletion(client, $"/api/assessments/{orphan.Id}");
+
+        Assert.Equal("Failed", failed.GetProperty("status").GetString());
+
+        // The same worker loop still serves new work.
+        var created = await client.PostAsJsonAsync("/api/applications", new
+        {
+            annualIncome = 60_000m, monthlyExpenses = 500m, depositAmount = 50_000m, propertyValue = 300_000m, termYears = 25,
+        });
+        var applicationId = (await ReadJson(created)).GetProperty("id").GetGuid();
+        var queued = await client.PostAsync($"/api/applications/{applicationId}/assessments/queued", null);
+        var done = await WaitForCompletion(client, queued.Headers.Location!.ToString());
+        Assert.Equal("Completed", done.GetProperty("status").GetString());
     }
 
     [Fact]
