@@ -7,7 +7,7 @@ requests, including bad bodies, overflow numbers and boundary figures. Result: n
 
 | # | Finding | Decision | Commit or reason |
 |---|---|---|---|
-| F1 | README unfinished: no REVIEW.md, placeholder text in the AI section | Fixed (this file); the AI section is the author's own words | this commit |
+| F1 | README unfinished: no REVIEW.md, placeholder text in the AI section | Fixed (this file); the AI section was finished and each claim in it confirmed by the author | this commit, then the next |
 | F2 | Explanation printed "LTV 90.0% exceeds the 90% limit" just over a limit | Fixed: a failing percentage that would round down to its limit is rounded up | 5b68ec4 |
 | F3 | Any valid token can read any application (no ownership) | Documented in Trade-offs; next step is owner by `sub` or role policies | 857c339 |
 | F4 | Nothing tested that `/dev/token` is Development only, or the 32-byte key check | Fixed: two tests | f61bd69 |
