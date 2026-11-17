@@ -73,6 +73,26 @@ public class MortgageApplicationTests
         Assert.Equal(field, ex.Field);
     }
 
+    [Theory]
+    [InlineData(60000.001, 500, 50000, 300000, "annualIncome")]
+    [InlineData(60000, 500.005, 50000, 300000, "monthlyExpenses")]
+    [InlineData(60000, 500, 50000.001, 300000, "depositAmount")]
+    [InlineData(60000, 500, 50000, 300000.001, "propertyValue")]
+    public void Create_rejects_more_than_two_decimal_places(
+        decimal income, decimal expenses, decimal deposit, decimal property, string field)
+    {
+        var ex = Assert.Throws<DomainException>(() => Create(income, expenses, deposit, property));
+        Assert.Equal(field, ex.Field);
+        Assert.EndsWith("must have at most 2 decimal places.", ex.Message);
+    }
+
+    [Fact]
+    public void Create_accepts_pounds_and_pence()
+    {
+        var application = Create(60000.50m, 500.25m, 50000.10m, 300000.99m);
+        Assert.Equal(300000.99m - 50000.10m, application.LoanAmount);
+    }
+
     [Fact]
     public void Create_accepts_upper_bounds_with_zero_deposit()
     {

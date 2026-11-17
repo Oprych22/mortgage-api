@@ -38,6 +38,11 @@ public sealed class MortgageApplication
             throw new DomainException("propertyValue", "Property value must be greater than 0 and at most 100,000,000.");
         if (termYears is < 5 or > 40)
             throw new DomainException("termYears", "Term must be between 5 and 40 years.");
+        // Money is pounds and pence: more precision than that is a client mistake, not something to store.
+        RequireWholePence(annualIncome, "annualIncome", "Annual income");
+        RequireWholePence(monthlyExpenses, "monthlyExpenses", "Monthly expenses");
+        RequireWholePence(depositAmount, "depositAmount", "Deposit");
+        RequireWholePence(propertyValue, "propertyValue", "Property value");
         if (depositAmount >= propertyValue)
             throw new DomainException("depositAmount", "Deposit must be less than the property value.");
 
@@ -51,5 +56,11 @@ public sealed class MortgageApplication
             TermYears = termYears,
             CreatedAt = now,
         };
+    }
+
+    private static void RequireWholePence(decimal amount, string field, string label)
+    {
+        if (decimal.Round(amount, 2) != amount)
+            throw new DomainException(field, $"{label} must have at most 2 decimal places.");
     }
 }

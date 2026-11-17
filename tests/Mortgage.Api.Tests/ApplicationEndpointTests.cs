@@ -99,6 +99,14 @@ public class ApplicationEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task Post_money_with_more_than_two_decimal_places_returns_400()
+    {
+        var response = await _client.PostAsJsonAsync("/api/applications", Approve(annualIncome: 60_000.123m));
+
+        await AssertValidationError(response, "annualIncome");
+    }
+
+    [Fact]
     public async Task Post_malformed_json_returns_400()
     {
         var response = await _client.PostAsync("/api/applications",
