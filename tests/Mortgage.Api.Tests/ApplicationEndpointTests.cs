@@ -114,6 +114,8 @@ public class ApplicationEndpointTests : IDisposable
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("The request body is not valid JSON for this endpoint.",
+            (await ReadJson(response)).GetProperty("detail").GetString());
     }
 
     private static async Task AssertValidationError(HttpResponseMessage response, string field)

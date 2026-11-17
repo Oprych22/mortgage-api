@@ -18,6 +18,11 @@ builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = 
         validation.Errors.Clear();
         foreach (var (key, messages) in errors) validation.Errors[key] = messages;
     }
+    // A 400 with no errors dictionary is a body that could not be read at all (bad JSON, wrong type), so say that.
+    else if (context.ProblemDetails.Status == StatusCodes.Status400BadRequest)
+    {
+        context.ProblemDetails.Detail ??= "The request body is not valid JSON for this endpoint.";
+    }
 });
 builder.Services.AddValidation();
 // In Development a bad request body would otherwise throw and the exception page would turn it into a 500.
