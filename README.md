@@ -186,5 +186,5 @@ I built this with Claude Code. I set the design and the affordability rules firs
 `CLAUDE.md`). Before any code was written, the design was reviewed by AI twice and both reviews changed it; the second,
 with no shared context, found the DTI cap, a duplicated rule, missing fields binding to 0, and the scaling answer.
 Claude Code then wrote the code one task at a time, with a separate AI review of each task before the next started. I
-read every change before it went in and can explain every line. An independent AI review of the whole repository, with
+read every change before it went in. An independent AI review of the whole repository, with
 what was fixed and what was left, is in `REVIEW.md`.
