@@ -64,6 +64,7 @@ public sealed class Assessment
     }
 
     // A finished assessment is a record of a decision; it is never rewritten.
+    // Trade-off: this guards one in-memory instance only. A concurrency token (row version) would make it safe across concurrent workers.
     private void EnsurePending()
     {
         if (Status != AssessmentStatus.Pending)

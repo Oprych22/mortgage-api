@@ -63,7 +63,7 @@ public class MortgageApplicationTests
     [InlineData(60000, -1, 50000, 300000, "monthlyExpenses")]
     [InlineData(60000, 1_000_001, 50000, 300000, "monthlyExpenses")]
     [InlineData(60000, 500, -1, 300000, "depositAmount")]
-    [InlineData(60000, 500, 100_000_001, 200_000_000, "depositAmount")]
+    [InlineData(60000, 500, 100_000_001, 100_000_000, "depositAmount")]
     [InlineData(60000, 500, 50000, 0, "propertyValue")]
     [InlineData(60000, 500, 50000, 100_000_001, "propertyValue")]
     public void Create_rejects_values_outside_bounds(
@@ -76,8 +76,8 @@ public class MortgageApplicationTests
     [Fact]
     public void Create_accepts_upper_bounds_and_zero_deposit_and_expenses()
     {
-        var application = Create(10_000_000m, 0m, 0m, 100_000_000m);
+        var application = Create(10_000_000m, 1_000_000m, 0m, 100_000_000m);
         Assert.Equal(100_000_000m, application.LoanAmount);
-        Assert.Equal(0m, application.MonthlyExpenses);
+        Assert.Equal(1_000_000m, application.MonthlyExpenses);
     }
 }
