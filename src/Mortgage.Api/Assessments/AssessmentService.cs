@@ -57,6 +57,8 @@ public sealed class AssessmentService(
             logger.LogInformation("Assessment {AssessmentId} completed: {Decision}", assessmentId, assessment.Decision);
     }
 
+    // A template scope, not a dictionary: the simple console prints it as text, and a structured sink
+    // still gets ApplicationId and AssessmentId as separate properties.
     private IDisposable? BeginScope(Guid applicationId, Guid assessmentId) => logger.BeginScope(
-        new Dictionary<string, object> { ["ApplicationId"] = applicationId, ["AssessmentId"] = assessmentId });
+        "ApplicationId:{ApplicationId} AssessmentId:{AssessmentId}", applicationId, assessmentId);
 }
