@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Mortgage.Api.Applications;
+using Mortgage.Api.Assessments;
 using Mortgage.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,11 @@ builder.Services.AddValidation();
 builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = false);
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Mortgage")!);
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddOptions<AffordabilityOptions>()
+    .BindConfiguration(AffordabilityOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddScoped<AssessmentService>();
 
 var app = builder.Build();
 
@@ -37,6 +43,7 @@ app.UseStatusCodePages();
 
 var api = app.MapGroup("/api");
 api.MapApplicationEndpoints();
+api.MapAssessmentEndpoints();
 
 app.Run();
 

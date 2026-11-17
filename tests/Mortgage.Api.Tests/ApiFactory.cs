@@ -12,9 +12,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        // UseSetting, not ConfigureAppConfiguration: Program.cs reads the connection string while building,
+        // before ConfigureAppConfiguration callbacks apply, so only a host setting reaches it.
+        builder.UseSetting("ConnectionStrings:Mortgage", $"Data Source={_databasePath}");
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:Mortgage"] = $"Data Source={_databasePath}",
             ["Assessments:WorkerDelaySeconds"] = "0",
         }));
     }
