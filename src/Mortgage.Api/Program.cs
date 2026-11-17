@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
 {
     // The built-in validation names errors after the C# property (MonthlyExpenses) but the domain uses
-    // the JSON name (depositAmount). Lower-casing the first letter gives clients one format for both.
+    // the JSON name (depositAmount). Camel-casing the key (JsonNamingPolicy.CamelCase) gives clients one format for both.
     if (context.ProblemDetails is HttpValidationProblemDetails validation)
     {
         var errors = validation.Errors.ToDictionary(

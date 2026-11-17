@@ -13,7 +13,7 @@ public class MortgageDbContext(DbContextOptions<MortgageDbContext> options) : Db
     {
         // Trade-off: SQLite stores every decimal property on both entities as TEXT. That keeps them
         // exact, but SQL cannot use an index to order or range-filter them, and DateTimeOffset
-        // cannot be ordered or compared in SQL at all. Nothing here needs either; SQL Server or
+        // cannot be ordered or range-compared in SQL at all. Nothing here needs either; SQL Server or
         // PostgreSQL would.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MortgageDbContext).Assembly);
     }

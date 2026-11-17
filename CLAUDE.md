@@ -12,7 +12,7 @@ ASP.NET Core 10 minimal API to create, retrieve and assess mortgage applications
 
 - `src/Mortgage.Domain`: entities, affordability rules and calculator. Plain C#, no PackageReference.
 - `src/Mortgage.Infrastructure`: EF Core, SQLite, in-process queue. References Domain only.
-- `src/Mortgage.Api`: minimal API endpoints, validation, services, background worker. References Domain and Infrastructure.
+- `src/Mortgage.Api`: minimal API endpoints, validation, services, background worker, JWT auth, logging and health. References Domain and Infrastructure.
 - `tests/Mortgage.Domain.Tests`, `tests/Mortgage.Api.Tests` (WebApplicationFactory).
 - Dependencies point inward: Domain never references Infrastructure or Api.
 
