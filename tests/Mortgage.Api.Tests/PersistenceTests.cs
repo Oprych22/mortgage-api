@@ -37,6 +37,7 @@ public class PersistenceTests
         var loadedAssessment = Assert.Single(loaded.Assessments);
 
         Assert.Equal(250_000m, loaded.LoanAmount);
+        // 250000/300000 has 28 decimal places, so a double/REAL column would fail this.
         Assert.Equal(result.Ltv, loadedAssessment.Ltv);
         Assert.Equal(result.Decision, loadedAssessment.Decision);
         Assert.Equal(result.Rules.Select(r => r.Message), loadedAssessment.Explanation);
