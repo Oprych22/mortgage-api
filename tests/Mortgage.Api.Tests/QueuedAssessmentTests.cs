@@ -110,6 +110,8 @@ public class QueuedAssessmentTests
         var failed = await WaitForCompletion(client, $"/api/assessments/{orphan.Id}");
 
         Assert.Equal("Failed", failed.GetProperty("status").GetString());
+        // Client-safe text only: the exception message stays in the log.
+        Assert.Equal("The assessment could not be completed.", failed.GetProperty("failureReason").GetString());
 
         // The same worker loop still serves new work.
         var created = await client.PostAsJsonAsync("/api/applications", new

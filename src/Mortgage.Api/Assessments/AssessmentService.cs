@@ -64,7 +64,8 @@ public sealed class AssessmentService(
         {
             // One bad assessment must not take the caller (or the worker) down: record it and carry on.
             logger.LogError(ex, "Assessment {AssessmentId} failed", assessmentId);
-            assessment.Fail(ex.Message, clock.GetUtcNow());
+            // The stored reason is returned to clients, so it is fixed text; the exception detail stays in the log.
+            assessment.Fail("The assessment could not be completed.", clock.GetUtcNow());
         }
 
         // A failed save is not caught: marking Failed needs the same database. The row stays Pending for a restart to re-queue.
