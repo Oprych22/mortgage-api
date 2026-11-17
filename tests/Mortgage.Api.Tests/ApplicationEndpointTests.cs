@@ -113,6 +113,6 @@ public class ApplicationEndpointTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         var errors = (await ReadJson(response)).GetProperty("errors");
-        Assert.Contains(errors.EnumerateObject(), e => string.Equals(e.Name, field, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(errors.EnumerateObject(), e => e.Name == field);
     }
 }

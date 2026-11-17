@@ -6,16 +6,16 @@ namespace Mortgage.Api.Applications;
 // quietly become 0 when absent from the JSON, and 0 is a valid expenses figure.
 public sealed class CreateApplicationRequest
 {
-    [Required, Range(typeof(decimal), "0.01", "10000000")]
+    [Required, Range(typeof(decimal), "0.01", "10000000", ParseLimitsInInvariantCulture = true)]
     public decimal? AnnualIncome { get; init; }
 
-    [Required, Range(typeof(decimal), "0", "1000000")]
+    [Required, Range(typeof(decimal), "0", "1000000", ParseLimitsInInvariantCulture = true)]
     public decimal? MonthlyExpenses { get; init; }
 
-    [Required, Range(typeof(decimal), "0", "100000000")]
+    [Required, Range(typeof(decimal), "0", "100000000", ParseLimitsInInvariantCulture = true)]
     public decimal? DepositAmount { get; init; }
 
-    [Required, Range(typeof(decimal), "0.01", "100000000")]
+    [Required, Range(typeof(decimal), "0.01", "100000000", ParseLimitsInInvariantCulture = true)]
     public decimal? PropertyValue { get; init; }
 
     [Required, Range(5, 40)]

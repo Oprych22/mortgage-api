@@ -1,9 +1,21 @@
+using System.Text.Json;
 using Mortgage.Api.Applications;
 using Mortgage.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+{
+    // The built-in validation names errors after the C# property (MonthlyExpenses) but the domain uses
+    // the JSON name (depositAmount). Lower-casing the first letter gives clients one format for both.
+    if (context.ProblemDetails is HttpValidationProblemDetails validation)
+    {
+        var errors = validation.Errors.ToDictionary(
+            e => JsonNamingPolicy.CamelCase.ConvertName(e.Key), e => e.Value);
+        validation.Errors.Clear();
+        foreach (var (key, messages) in errors) validation.Errors[key] = messages;
+    }
+});
 builder.Services.AddValidation();
 // In Development a bad request body would otherwise throw and the exception page would turn it into a 500.
 // Malformed JSON is the client's mistake, so it must be a 400 in every environment.
